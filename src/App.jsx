@@ -239,23 +239,9 @@ const showActions = currentProfile?.gm || false;
       gap="2rem"
       alignContent="center"
     >
-    {userprofiles.map((userprofile) => (
-      <Flex
-        key={userprofile.id || userprofile.email}
-        direction="column"
-        justifyContent="center"
-        alignItems="center"
-        gap="2rem"
-        border="1px solid #ccc"
-        padding="2rem"
-        borderRadius="5%"
-        className="box"
-      >
       <View>
-        <Heading level="3">{userprofile.email}</Heading>
+        <Heading level="3">{currentProfile?.email}</Heading>
      </View>
-    </Flex>
-    ))}
  </Grid>
  
     <Heading level={1}>My Trails</Heading>
