@@ -60,6 +60,15 @@ export default function App() {
   }
  }
  
+ async function deleteTrailStep(id) {
+  try {
+    await client.models.TrailSteps.delete({ id });
+    setTrailSteps((prev) => prev.filter((s) => s.id !== id));
+  } catch (error) {
+    console.error('Error deleting trail step:', error);
+  }
+ }
+ 
  useEffect(() => {
    if (user) {
      fetchUserProfile();
@@ -142,6 +151,7 @@ export default function App() {
             <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>Step Name</th>
             <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>Analyze</th>
             <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>Result</th>
+            <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -150,6 +160,11 @@ export default function App() {
               <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>{step.stepName}</td>
               <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>{step.analyze}</td>
               <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}><div dangerouslySetInnerHTML={{ __html: step.result }} /></td>
+              <td style={{ border: '1px solid #ccc', padding: '0.5rem', textAlign: 'center' }}>
+                <button onClick={() => deleteTrailStep(step.id)} style={{ padding: '0.25rem 0.5rem' }}>
+                  Delete
+                </button>
+              </td>
             </tr>
           ))}
         </tbody>
