@@ -31,8 +31,64 @@ export default function App() {
  
  async function fetchUserProfile() {
   try {
+    console.log('Current user:', {
+      userId: user?.userId,
+      loginId: user?.signInDetails?.loginId,
+      username: user?.username,
+      sub: user?.userId, // might be different from loginId
+    });
+
     const { data: profiles } = await client.models.UserProfile.list();
+    console.log('All accessible profiles:', profiles);
+    if (profiles.length === 0) {
+      console.warn('No profiles returned by list(). This usually means the authorization filter removed them.');
+      console.log('Expected profileOwner format:', `${user?.userId}::${user?.signInDetails?.loginId}`);
+    }
+    
     setUserProfiles(profiles);
+    
+    // Check if current user has a profile, and create one if not
+    if (user && user.userId) {
+      // try to find profile by profileOwner or email (email is loginId)
+    const userEmail = user.signInDetails?.loginId || user.username || '';
+    const userProfile = profiles.find(
+      (p) =>
+        p.profileOwner?.startsWith(user.userId) ||
+        (userEmail && p.email === userEmail)
+    );
+      
+      if (!userProfile) {
+        try {
+          const userEmail = user.signInDetails?.loginId || user.username || 'unknown';
+          const profileOwner = `${user.userId}::${user.signInDetails?.loginId}`;
+          
+          // Refetch to ensure we have the latest state (avoids double-creation with Lambda)
+          const { data: latestProfiles } = await client.models.UserProfile.list();
+          const alreadyExists = latestProfiles.find(
+            (p) =>
+              p.profileOwner?.startsWith(user.userId) ||
+              (userEmail && p.email === userEmail)
+          );
+          
+          if (!alreadyExists) {
+            const { data: newProfile } = await client.models.UserProfile.create({
+              email: userEmail,
+              profileOwner,
+              revealedSteps: [],
+              analyzedSteps: [],
+            });
+            
+            setUserProfiles((prev) => [...prev, newProfile]);
+            console.log('Created new profile for user:', userEmail);
+          } else {
+            // Profile was created by Lambda or in previous iteration; just update state
+            setUserProfiles(latestProfiles);
+          }
+        } catch (createError) {
+          console.error('Error creating user profile:', createError);
+        }
+      }
+    }
   } catch (error) {
     console.error("Error fetching profiles:", error);
   }
@@ -83,6 +139,34 @@ export default function App() {
   }
  }
  
+ async function revealStep(stepId) {
+  try {
+    console.log('Revealing step:', stepId);
+    const currentProfile = userprofiles.find(
+      (p) => p.profileOwner === `${user.userId}::${user.signInDetails?.loginId}`
+    );
+    if (!currentProfile) {
+      console.error('Current user profile not found when revealing step');
+      return;
+    }
+    
+    const revealedSteps = [...(currentProfile.revealedSteps || [])];
+    if (!revealedSteps.includes(stepId)) {
+      revealedSteps.push(stepId);
+    }
+    console.log('Revealed steps to update:', revealedSteps);
+    const { data: updated } = await client.models.UserProfile.update({
+      id: currentProfile.id,
+      revealedSteps,
+    });
+    
+    console.log('Updated profile after revealing step:', updated);
+    setUserProfiles((prev) => prev.map((p) => (p.id === currentProfile.id ? updated : p)));
+  } catch (error) {
+    console.error('Error revealing step:', error);
+  }
+ }
+
  useEffect(() => {
    if (user) {
      fetchUserProfile();
@@ -169,72 +253,87 @@ export default function App() {
           </tr>
         </thead>
         <tbody>
-          {trailSteps.map((step) => (
-            <tr key={step.id || step.stepName}>
-              {editingStepId === step.id ? (
-                <>
-                  <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>
-                    <input
-                      type="text"
-                      value={editingValues.stepName}
-                      onChange={(e) => setEditingValues((v) => ({ ...v, stepName: e.target.value }))}
-                    />
-                  </td>
-                  <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>
-                    <input
-                      type="text"
-                      value={editingValues.analyze}
-                      onChange={(e) => setEditingValues((v) => ({ ...v, analyze: e.target.value }))}
-                    />
-                  </td>
-                  <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>
-                    <input
-                      type="text"
-                      value={editingValues.result}
-                      onChange={(e) => setEditingValues((v) => ({ ...v, result: e.target.value }))}
-                    />
-                  </td>
-                  <td style={{ border: '1px solid #ccc', padding: '0.5rem', textAlign: 'center' }}>
-                    <button
-                      onClick={() => {
-                        updateTrailStep(step.id, editingValues);
-                        setEditingStepId(null);
-                      }}
-                      style={{ padding: '0.25rem 0.5rem', marginRight: '0.25rem' }}
-                    >
-                      Save
-                    </button>
-                    <button
-                      onClick={() => setEditingStepId(null)}
-                      style={{ padding: '0.25rem 0.5rem' }}
-                    >
-                      Cancel
-                    </button>
-                  </td>
-                </>
-              ) : (
-                <>
-                  <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>{step.stepName}</td>
-                  <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>{step.analyze}</td>
-                  <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}><div dangerouslySetInnerHTML={{ __html: step.result }} /></td>
-                  <td style={{ border: '1px solid #ccc', padding: '0.5rem', textAlign: 'center' }}>
-                    <button
-                      onClick={() => {
-                        setEditingStepId(step.id);
-                        setEditingValues({ stepName: step.stepName, analyze: step.analyze, result: step.result });
-                      }}
-                      style={{ padding: '0.25rem 0.5rem', marginRight: '0.25rem' }}
-                    >
-                      Edit
-                    </button>
-                    <button onClick={() => deleteTrailStep(step.id)} style={{ padding: '0.25rem 0.5rem' }}>
-                      Delete
-                    </button>
-                  </td>
-                </>
-              )}
-            </tr>
-          ))}
+          {trailSteps.map((step) => {
+            const currentProfile = userprofiles.find(
+              (p) => p.profileOwner === `${user.userId}::${user.signInDetails?.loginId}`
+            );
+            const isRevealed = currentProfile?.revealedSteps?.includes(step.id) || false;
+            
+            return isRevealed ? (
+              <tr key={step.id || step.stepName}>
+                {editingStepId === step.id ? (
+                  <>
+                    <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>
+                      <input
+                        type="text"
+                        value={editingValues.stepName}
+                        onChange={(e) => setEditingValues((v) => ({ ...v, stepName: e.target.value }))}
+                      />
+                    </td>
+                    <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>
+                      <input
+                        type="text"
+                        value={editingValues.analyze}
+                        onChange={(e) => setEditingValues((v) => ({ ...v, analyze: e.target.value }))}
+                      />
+                    </td>
+                    <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>
+                      <input
+                        type="text"
+                        value={editingValues.result}
+                        onChange={(e) => setEditingValues((v) => ({ ...v, result: e.target.value }))}
+                      />
+                    </td>
+                    <td style={{ border: '1px solid #ccc', padding: '0.5rem', textAlign: 'center' }}>
+                      <button
+                        onClick={() => {
+                          updateTrailStep(step.id, editingValues);
+                          setEditingStepId(null);
+                        }}
+                        style={{ padding: '0.25rem 0.5rem', marginRight: '0.25rem' }}
+                      >
+                        Save
+                      </button>
+                      <button
+                        onClick={() => setEditingStepId(null)}
+                        style={{ padding: '0.25rem 0.5rem' }}
+                      >
+                        Cancel
+                      </button>
+                    </td>
+                  </>
+                ) : (
+                  <>
+                    <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>{step.stepName}</td>
+                    <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>{step.analyze}</td>
+                    <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}><div dangerouslySetInnerHTML={{ __html: step.result }} /></td>
+                    <td style={{ border: '1px solid #ccc', padding: '0.5rem', textAlign: 'center' }}>
+                      <button
+                        onClick={() => {
+                          setEditingStepId(step.id);
+                          setEditingValues({ stepName: step.stepName, analyze: step.analyze, result: step.result });
+                        }}
+                        style={{ padding: '0.25rem 0.5rem', marginRight: '0.25rem' }}
+                      >
+                        Edit
+                      </button>
+                      <button onClick={() => deleteTrailStep(step.id)} style={{ padding: '0.25rem 0.5rem' }}>
+                        Delete
+                      </button>
+                    </td>
+                  </>
+                )}
+              </tr>
+            ) : (
+              <tr key={step.id || step.stepName}>
+                <td colSpan="4" style={{ border: '1px solid #ccc', padding: '0.5rem', textAlign: 'center' }}>
+                  <button onClick={() => revealStep(step.id)} style={{ padding: '0.5rem 1rem' }}>
+                    Reveal Step
+                  </button>
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     ) : (

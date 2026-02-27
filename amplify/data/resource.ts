@@ -6,9 +6,12 @@ const schema = a.schema({
  UserProfile: a.model({
  email: a.string(),
  profileOwner: a.string(),
+ revealedSteps: a.string().array(),
+ analyzedSteps: a.string().array(),
  })
- .authorization((allow: { ownerDefinedIn: (arg0: string) => any; }) => [
- allow.ownerDefinedIn("profileOwner"),
+ .authorization((allow: { authenticated: () => any; ownerDefinedIn: (arg0: string) => any; }) => [
+ allow.authenticated().to(['create', 'read']),
+ allow.ownerDefinedIn("profileOwner").to(['update', 'delete', 'read']),
  ]),
  TrailSteps: a.model({
  stepName: a.string(),
