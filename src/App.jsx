@@ -22,9 +22,11 @@ const client = generateClient({
 });
 export default function App() {
  const [userprofiles, setUserProfiles] = useState([]);
+ const [trailSteps, setTrailSteps] = useState([]);
+ const [newStep, setNewStep] = useState({ stepName: '', analyze: '', result: '' });
  
- const { user } = useAuthenticator((context) => [context.user]);
- const { signOut } = useAuthenticator((context) => [context.user]);
+ const { user, signOut } = useAuthenticator((context) => [context.user]);
+ 
  async function fetchUserProfile() {
   try {
     const { data: profiles } = await client.models.UserProfile.list();
@@ -33,11 +35,38 @@ export default function App() {
     console.error("Error fetching profiles:", error);
   }
  }
+ 
+ async function fetchTrailSteps() {
+  try {
+    const { data: steps } = await client.models.TrailSteps.list();
+    setTrailSteps(steps);
+  } catch (error) {
+    console.error("Error fetching trail steps:", error);
+  }
+ }
+ 
+ async function createTrailStep(e) {
+  e.preventDefault();
+  try {
+    const { data: created } = await client.models.TrailSteps.create({
+        stepName: newStep.stepName,
+        analyze: newStep.analyze,
+        result: newStep.result,
+    });
+    setTrailSteps((prev) => [...prev, created]);
+    setNewStep({ stepName: '', analyze: '', result: '' });
+  } catch (error) {
+    console.error('Error creating trail step:', error);
+  }
+ }
+ 
  useEffect(() => {
    if (user) {
-   fetchUserProfile();
+     fetchUserProfile();
+     fetchTrailSteps();
    }
- }, []);
+ }, [user]);
+ 
  return (
   <Flex
     className="App"
@@ -77,7 +106,58 @@ export default function App() {
  
     <Heading level={1}>My Trails</Heading>
     <Divider />
- <Button onClick={signOut}>Sign Out</Button>
+    <form onSubmit={createTrailStep} style={{ margin: '1rem 0', width: '100%' }}>
+      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+        <input
+          type="text"
+          placeholder="Step Name"
+          value={newStep.stepName}
+          onChange={(e) => setNewStep((s) => ({ ...s, stepName: e.target.value }))}
+          style={{ flex: '1', padding: '0.5rem' }}
+          required
+        />
+        <input
+          type="text"
+          placeholder="Analyze"
+          value={newStep.analyze}
+          onChange={(e) => setNewStep((s) => ({ ...s, analyze: e.target.value }))}
+          style={{ flex: '1', padding: '0.5rem' }}
+          required
+        />
+        <input
+          type="text"
+          placeholder="Result"
+          value={newStep.result}
+          onChange={(e) => setNewStep((s) => ({ ...s, result: e.target.value }))}
+          style={{ flex: '1', padding: '0.5rem' }}
+          required
+        />
+        <button type="submit" style={{ padding: '0.5rem 1rem' }}>Add Step</button>
+      </div>
+    </form>
+    {trailSteps.length > 0 ? (
+      <table style={{ width: '100%', margin: '1rem 0', borderCollapse: 'collapse' }}>
+        <thead>
+          <tr>
+            <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>Step Name</th>
+            <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>Analyze</th>
+            <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>Result</th>
+          </tr>
+        </thead>
+        <tbody>
+          {trailSteps.map((step) => (
+            <tr key={step.id || step.stepName}>
+              <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>{step.stepName}</td>
+              <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>{step.analyze}</td>
+              <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>{step.result}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    ) : (
+      <p>No trail steps found.</p>
+    )}
+    <Button onClick={signOut}>Sign Out</Button>
  </Flex>
  );
 }

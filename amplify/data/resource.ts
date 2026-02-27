@@ -2,15 +2,22 @@ import { type ClientSchema, a, defineData } from "@aws-amplify/backend";
 import { postConfirmation } from "../auth/post-confirmation/resource";
 import { AddEnvironmentFactory } from "@aws-amplify/backend-function";
 import { ConstructFactory, ResourceProvider, FunctionResources, ResourceAccessAcceptorFactory, StackProvider } from "@aws-amplify/plugin-types";
-const schema = a
- .schema({
- UserProfile: a
- .model({
+const schema = a.schema({
+ UserProfile: a.model({
  email: a.string(),
  profileOwner: a.string(),
  })
  .authorization((allow: { ownerDefinedIn: (arg0: string) => any; }) => [
  allow.ownerDefinedIn("profileOwner"),
+ ]),
+ TrailSteps: a.model({
+ stepName: a.string(),
+ analyze: a.string(),
+ result: a.string(),
+ })
+ .authorization((allow: { authenticated: () => any; }) => [
+   // any authenticated user can read and update all records
+   allow.authenticated(),
  ]),
  })
  .authorization((allow: { resource: (arg0: ConstructFactory<ResourceProvider<FunctionResources> & ResourceAccessAcceptorFactory & AddEnvironmentFactory & StackProvider>) => any; }) => [allow.resource(postConfirmation)]);
