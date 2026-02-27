@@ -149,7 +149,7 @@ export default function App() {
             <tr key={step.id || step.stepName}>
               <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>{step.stepName}</td>
               <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>{step.analyze}</td>
-              <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>{step.result}</td>
+              <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}><div dangerouslySetInnerHTML={{ __html: step.result }} /></td>
             </tr>
           ))}
         </tbody>
