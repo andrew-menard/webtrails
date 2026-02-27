@@ -142,9 +142,14 @@ export default function App() {
  async function revealStep(stepId) {
   try {
     console.log('Revealing step:', stepId);
+    
+    const userEmail = user.signInDetails?.loginId || user.username || '';
     const currentProfile = userprofiles.find(
-      (p) => p.profileOwner === `${user.userId}::${user.signInDetails?.loginId}`
+      (p) =>
+        p.profileOwner?.startsWith(user.userId) ||
+        (userEmail && p.email === userEmail)
     );
+    
     if (!currentProfile) {
       console.error('Current user profile not found when revealing step');
       return;
@@ -254,8 +259,11 @@ export default function App() {
         </thead>
         <tbody>
           {trailSteps.map((step) => {
+            const userEmail = user.signInDetails?.loginId || user.username || '';
             const currentProfile = userprofiles.find(
-              (p) => p.profileOwner === `${user.userId}::${user.signInDetails?.loginId}`
+              (p) =>
+                p.profileOwner?.startsWith(user.userId) ||
+                (userEmail && p.email === userEmail)
             );
             const isRevealed = currentProfile?.revealedSteps?.includes(step.id) || false;
             
