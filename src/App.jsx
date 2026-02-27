@@ -213,6 +213,18 @@ export default function App() {
    }
  }, [user]);
  
+ // deeplink support: reveal step if ?stepName=... present in URL
+ useEffect(() => {
+   const params = new URLSearchParams(window.location.search);
+   const targetName = params.get('stepName');
+   if (targetName && trailSteps.length > 0) {
+     const matching = trailSteps.find((s) => s.stepName === targetName);
+     if (matching) {
+       revealStep(matching.id);
+     }
+   }
+ }, [trailSteps]);
+ 
 const userEmail = user.signInDetails?.loginId || user.username || '';
 const currentProfile = userprofiles.find(
   (p) =>
