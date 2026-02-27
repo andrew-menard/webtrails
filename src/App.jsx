@@ -297,7 +297,10 @@ const showActions = currentProfile?.gm || false;
             <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>Analyze</th>
             <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>Result</th>
             {showActions && (
-              <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>Actions</th>
+              <>
+                <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>Actions</th>
+                <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>QRCode</th>
+              </>
             )}
           </tr>
         </thead>
