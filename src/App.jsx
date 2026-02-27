@@ -24,6 +24,8 @@ export default function App() {
  const [userprofiles, setUserProfiles] = useState([]);
  const [trailSteps, setTrailSteps] = useState([]);
  const [newStep, setNewStep] = useState({ stepName: '', analyze: '', result: '' });
+ const [editingStepId, setEditingStepId] = useState(null);
+ const [editingValues, setEditingValues] = useState({ stepName: '', analyze: '', result: '' });
  
  const { user, signOut } = useAuthenticator((context) => [context.user]);
  
@@ -69,6 +71,18 @@ export default function App() {
   }
  }
  
+ async function updateTrailStep(id, updates) {
+  try {
+    const { data: updated } = await client.models.TrailSteps.update({
+      id,
+      ...updates,
+    });
+    setTrailSteps((prev) => prev.map((s) => (s.id === id ? updated : s)));
+  } catch (error) {
+    console.error('Error updating trail step:', error);
+  }
+ }
+ 
  useEffect(() => {
    if (user) {
      fetchUserProfile();
@@ -94,6 +108,7 @@ export default function App() {
       gap="2rem"
       alignContent="center"
     >
+      <div>{userprofiles}</div>
     {userprofiles.map((userprofile) => (
       <Flex
         key={userprofile.id || userprofile.email}
@@ -157,14 +172,68 @@ export default function App() {
         <tbody>
           {trailSteps.map((step) => (
             <tr key={step.id || step.stepName}>
-              <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>{step.stepName}</td>
-              <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>{step.analyze}</td>
-              <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}><div dangerouslySetInnerHTML={{ __html: step.result }} /></td>
-              <td style={{ border: '1px solid #ccc', padding: '0.5rem', textAlign: 'center' }}>
-                <button onClick={() => deleteTrailStep(step.id)} style={{ padding: '0.25rem 0.5rem' }}>
-                  Delete
-                </button>
-              </td>
+              {editingStepId === step.id ? (
+                <>
+                  <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>
+                    <input
+                      type="text"
+                      value={editingValues.stepName}
+                      onChange={(e) => setEditingValues((v) => ({ ...v, stepName: e.target.value }))}
+                    />
+                  </td>
+                  <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>
+                    <input
+                      type="text"
+                      value={editingValues.analyze}
+                      onChange={(e) => setEditingValues((v) => ({ ...v, analyze: e.target.value }))}
+                    />
+                  </td>
+                  <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>
+                    <input
+                      type="text"
+                      value={editingValues.result}
+                      onChange={(e) => setEditingValues((v) => ({ ...v, result: e.target.value }))}
+                    />
+                  </td>
+                  <td style={{ border: '1px solid #ccc', padding: '0.5rem', textAlign: 'center' }}>
+                    <button
+                      onClick={() => {
+                        updateTrailStep(step.id, editingValues);
+                        setEditingStepId(null);
+                      }}
+                      style={{ padding: '0.25rem 0.5rem', marginRight: '0.25rem' }}
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={() => setEditingStepId(null)}
+                      style={{ padding: '0.25rem 0.5rem' }}
+                    >
+                      Cancel
+                    </button>
+                  </td>
+                </>
+              ) : (
+                <>
+                  <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>{step.stepName}</td>
+                  <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>{step.analyze}</td>
+                  <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}><div dangerouslySetInnerHTML={{ __html: step.result }} /></td>
+                  <td style={{ border: '1px solid #ccc', padding: '0.5rem', textAlign: 'center' }}>
+                    <button
+                      onClick={() => {
+                        setEditingStepId(step.id);
+                        setEditingValues({ stepName: step.stepName, analyze: step.analyze, result: step.result });
+                      }}
+                      style={{ padding: '0.25rem 0.5rem', marginRight: '0.25rem' }}
+                    >
+                      Edit
+                    </button>
+                    <button onClick={() => deleteTrailStep(step.id)} style={{ padding: '0.25rem 0.5rem' }}>
+                      Delete
+                    </button>
+                  </td>
+                </>
+              )}
             </tr>
           ))}
         </tbody>
