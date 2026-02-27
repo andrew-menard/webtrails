@@ -10,8 +10,11 @@ export default function TrailStepRow({
   updateTrailStep,
   deleteTrailStep,
   revealStep,
+  analyzeStep
 }) {
   const isRevealed = currentProfile?.revealedSteps?.includes(step.id) || false;
+
+  const isAnalyzed = currentProfile?.analyzedSteps?.includes(step.id) || false;
 
   if (!isRevealed) {
     return (
@@ -75,7 +78,13 @@ export default function TrailStepRow({
           <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>{step.stepName}</td>
           <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>{step.analyze}</td>
           <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>
-            <div dangerouslySetInnerHTML={{ __html: step.result }} />
+            { isAnalyzed ? (
+              <div dangerouslySetInnerHTML={{ __html: step.result }} /> 
+            ) : (
+              <button onClick={() => analyzeStep(step.id)} style={{ padding: '0.5rem 1rem' }}>
+                Analyze Step
+              </button>
+            )}
           </td>
           <td style={{ border: '1px solid #ccc', padding: '0.5rem', textAlign: 'center' }}>
             <button

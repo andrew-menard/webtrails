@@ -173,6 +173,38 @@ export default function App() {
   }
  }
 
+ async function analyzeStep(stepId) {
+  try {
+    console.log('Analyzing step:', stepId);
+    
+    const userEmail = user.signInDetails?.loginId || user.username || '';
+    const currentProfile = userprofiles.find(
+      (p) =>
+        p.profileOwner?.startsWith(user.userId) ||
+        (userEmail && p.email === userEmail)
+    );
+    
+    if (!currentProfile) {
+      console.error('Current user profile not found when analyzing step');
+      return;
+    }
+    
+    const analyzedSteps = [...(currentProfile.analyzedSteps || [])];
+    if (!analyzedSteps.includes(stepId)) {
+      analyzedSteps.push(stepId);
+    }
+    console.log('Analyzed steps to update:', analyzedSteps);
+    const { data: updated } = await client.models.UserProfile.update({
+      id: currentProfile.id,
+      analyzedSteps,
+    });
+    
+    console.log('Updated profile after analyzing step:', updated);
+    setUserProfiles((prev) => prev.map((p) => (p.id === currentProfile.id ? updated : p)));
+  } catch (error) {
+    console.error('Error analyzing step:', error);
+  }
+ }
  useEffect(() => {
    if (user) {
      fetchUserProfile();
@@ -279,6 +311,7 @@ export default function App() {
                 updateTrailStep={updateTrailStep}
                 deleteTrailStep={deleteTrailStep}
                 revealStep={revealStep}
+                analyzeStep={analyzeStep}
               />
             );
           })}
