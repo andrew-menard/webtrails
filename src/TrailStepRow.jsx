@@ -17,7 +17,7 @@ export default function TrailStepRow({
 
   const isAnalyzed = currentProfile?.analyzedSteps?.includes(step.id) || false;
 
-  if (!isRevealed) {
+  if (!isRevealed && !currentProfile?.gm) {
     return (
       <></>
     );
