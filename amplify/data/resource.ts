@@ -8,6 +8,7 @@ const schema = a.schema({
  profileOwner: a.string(),
  revealedSteps: a.string().array(),
  analyzedSteps: a.string().array(),
+ gm: a.boolean(),
  })
  .authorization((allow: { authenticated: () => any; ownerDefinedIn: (arg0: string) => any; }) => [
  allow.authenticated().to(['create', 'read']),

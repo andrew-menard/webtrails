@@ -77,6 +77,7 @@ export default function App() {
               profileOwner,
               revealedSteps: [],
               analyzedSteps: [],
+              gm: false, // default to non-GM
             });
             
             setUserProfiles((prev) => [...prev, newProfile]);
@@ -212,6 +213,14 @@ export default function App() {
    }
  }, [user]);
  
+const userEmail = user.signInDetails?.loginId || user.username || '';
+const currentProfile = userprofiles.find(
+  (p) =>
+    p.profileOwner?.startsWith(user.userId) ||
+    (userEmail && p.email === userEmail)
+);
+
+const showActions = currentProfile?.gm || false;
  return (
   <Flex
     className="App"
@@ -251,6 +260,7 @@ export default function App() {
  
     <Heading level={1}>My Trails</Heading>
     <Divider />
+            {showActions && (
     <form onSubmit={createTrailStep} style={{ margin: '1rem 0', width: '100%' }}>
       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
         <input
@@ -280,6 +290,7 @@ export default function App() {
         <button type="submit" style={{ padding: '0.5rem 1rem' }}>Add Step</button>
       </div>
     </form>
+            )}
     {trailSteps.length > 0 ? (
       <table style={{ width: '100%', margin: '1rem 0', borderCollapse: 'collapse' }}>
         <thead>
@@ -287,7 +298,9 @@ export default function App() {
             <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>Step Name</th>
             <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>Analyze</th>
             <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>Result</th>
-            <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>Actions</th>
+            {showActions && (
+              <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>Actions</th>
+            )}
           </tr>
         </thead>
         <tbody>
@@ -312,6 +325,7 @@ export default function App() {
                 deleteTrailStep={deleteTrailStep}
                 revealStep={revealStep}
                 analyzeStep={analyzeStep}
+                showActions={showActions}
               />
             );
           })}
