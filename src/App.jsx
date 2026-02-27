@@ -108,7 +108,6 @@ export default function App() {
       gap="2rem"
       alignContent="center"
     >
-      <div>{userprofiles}</div>
     {userprofiles.map((userprofile) => (
       <Flex
         key={userprofile.id || userprofile.email}
