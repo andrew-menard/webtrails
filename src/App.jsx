@@ -67,7 +67,6 @@ export default function App() {
       
       if (!userProfile) {
         try {
-          const userEmail = user.signInDetails?.loginId || user.username || 'unknown';
           const profileOwner = `${user.userId}::${user.signInDetails?.loginId}`;
           
           // Refetch to ensure we have the latest state (avoids double-creation with Lambda)
@@ -152,14 +151,7 @@ export default function App() {
  async function revealStep(stepId) {
   try {
     console.log('Revealing step:', stepId);
-    
-    const userEmail = user.signInDetails?.loginId || user.username || '';
-    const currentProfile = userprofiles.find(
-      (p) =>
-        p.profileOwner?.startsWith(user.userId) ||
-        (userEmail && p.email === userEmail)
-    );
-    
+        
     if (!currentProfile) {
       console.error('Current user profile not found when revealing step');
       return;
@@ -261,7 +253,10 @@ const stepSortFunction = (a, b) => {
 };
 
 const stepVisible = (step) => {
-  return currentProfile?.gm || (step.stepName && currentProfile?.revealedSteps?.includes(step.stepName));
+  console.log('Checking visibility for step:', step.id);
+  console.log('Current profile revealedSteps:', currentProfile?.revealedSteps);
+  console.log('Current profile GM status:', currentProfile?.gm);
+  return currentProfile?.gm === true || (step.stepName && currentProfile?.revealedSteps?.includes(step.id));
 }
 console.log("Trail steps before filtering and sorting:", trailSteps);
 
