@@ -18,6 +18,7 @@ const schema = a.schema({
  stepName: a.string(),
  analyze: a.string(),
  result: a.string(),
+ sortIndex: a.integer(),
  })
  .authorization((allow: { authenticated: () => any; }) => [
    // any authenticated user can read and update all records

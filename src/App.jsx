@@ -14,8 +14,7 @@ import { generateClient } from "aws-amplify/data";
 import TrailStepRow from './TrailStepRow';
 import outputs from "../amplify_outputs.json";
 /**
- * @type {import('aws-amplify/data').Client<import('../amplify/data/
-resource').Schema>}
+ * @type {import('aws-amplify/data').Client<import('../amplify/data/resource').Schema>}
  */
 Amplify.configure(outputs);
 const client = generateClient({
@@ -24,11 +23,19 @@ const client = generateClient({
 export default function App() {
  const [userprofiles, setUserProfiles] = useState([]);
  const [trailSteps, setTrailSteps] = useState([]);
- const [newStep, setNewStep] = useState({ stepName: '', analyze: '', result: '' });
+ const [newStep, setNewStep] = useState({ stepName: '', analyze: '', result: '', sortIndex: 0 });
  const [editingStepId, setEditingStepId] = useState(null);
- const [editingValues, setEditingValues] = useState({ stepName: '', analyze: '', result: '' });
+ const [editingValues, setEditingValues] = useState({ stepName: '', analyze: '', result: '', sortIndex: 0 });
  
  const { user, signOut } = useAuthenticator((context) => [context.user]);
+ // derive currentProfile and GM flag for header
+ const userEmail = user?.signInDetails?.loginId || user?.username || '';
+ const currentProfile = userprofiles.find(
+   (p) =>
+     p.profileOwner?.startsWith(user?.userId) ||
+     (userEmail && p.email === userEmail)
+ );
+ const showActions = currentProfile?.gm;
  
  async function fetchUserProfile() {
   try {
@@ -112,6 +119,7 @@ export default function App() {
         stepName: newStep.stepName,
         analyze: newStep.analyze,
         result: newStep.result,
+        sortIndex: newStep.sortIndex,
     });
     setTrailSteps((prev) => [...prev, created]);
     setNewStep({ stepName: '', analyze: '', result: '' });
@@ -140,7 +148,7 @@ export default function App() {
     console.error('Error updating trail step:', error);
   }
  }
- 
+
  async function revealStep(stepId) {
   try {
     console.log('Revealing step:', stepId);
@@ -225,14 +233,41 @@ export default function App() {
    }
  }, [trailSteps]);
  
-const userEmail = user.signInDetails?.loginId || user.username || '';
-const currentProfile = userprofiles.find(
-  (p) =>
-    p.profileOwner?.startsWith(user.userId) ||
-    (userEmail && p.email === userEmail)
-);
+const stepSortFunction = (a, b) => {
+  if (!a || !b) {
+    return 0; // treat missing steps as equal
+  }
+  if (!a.stepName || !b.stepName) {
+    return 0; // treat missing stepName as equal
+  }
+  const firstPart = a.stepName.split("-")[0].localeCompare(b.stepName.split("-")[0]);
+  if (firstPart !== 0) {
+    return firstPart;
+  }
+  
+  const secondPart = parseInt(a.stepName.split("-")[1]) - parseInt(b.stepName.split("-")[1]);
+  if (secondPart !== 0) {
+    return secondPart;
+  }
 
-const showActions = currentProfile?.gm || false;
+  if (a.sortIndex !== undefined && b.sortIndex !== undefined) {
+    if (a.sortIndex !== b.sortIndex) {
+      return a.sortIndex - b.sortIndex;
+    }
+  }
+  
+  const thirdPart = a.stepName.split("-")[2]?.localeCompare(b.stepName.split("-")[2]) || 0;
+  return thirdPart;
+};
+
+const stepVisible = (step) => {
+  return currentProfile?.gm || (step.stepName && currentProfile?.revealedSteps?.includes(step.stepName));
+}
+console.log("Trail steps before filtering and sorting:", trailSteps);
+
+console.log("Trail steps after filtering before sorting:", trailSteps.filter((step) => stepVisible(step)));
+const filteredTrailSteps = trailSteps.filter((step) => stepVisible(step)).toSorted(stepSortFunction);
+
  return (
   <Flex
     className="App"
@@ -270,6 +305,14 @@ const showActions = currentProfile?.gm || false;
           required
         />
         <input
+          type="number"
+          placeholder="Sort Index"
+          value={newStep.sortIndex}
+          onChange={(e) => setNewStep((s) => ({ ...s, sortIndex: parseInt(e.target.value,10) }))}
+          style={{ width: '6rem', padding: '0.5rem' }}
+          required
+        />
+        <input
           type="text"
           placeholder="Analyze"
           value={newStep.analyze}
@@ -298,6 +341,7 @@ const showActions = currentProfile?.gm || false;
             <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>Result</th>
             {showActions && (
               <>
+                <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>Sort</th>
                 <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>Actions</th>
                 <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>QRCode</th>
               </>
@@ -305,14 +349,9 @@ const showActions = currentProfile?.gm || false;
           </tr>
         </thead>
         <tbody>
-          {trailSteps.map((step) => {
-            const userEmail = user.signInDetails?.loginId || user.username || '';
-            const currentProfile = userprofiles.find(
-              (p) =>
-                p.profileOwner?.startsWith(user.userId) ||
-                (userEmail && p.email === userEmail)
-            );
+          {
 
+            filteredTrailSteps.map((step) => {
             return (
               <TrailStepRow
                 key={step.id || step.stepName}

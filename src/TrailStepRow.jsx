@@ -50,6 +50,14 @@ export default function TrailStepRow({
               onChange={(e) => setEditingValues((v) => ({ ...v, result: e.target.value }))}
             />
           </td>
+            <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>
+              <input
+                type="number"
+                value={editingValues.sortIndex}
+                onChange={(e) => setEditingValues((v) => ({ ...v, sortIndex: parseInt(e.target.value,10) }))}
+                style={{ width: '4rem' }}
+              />
+            </td>
           <td style={{ border: '1px solid #ccc', padding: '0.5rem', textAlign: 'center' }}>
             <button
               onClick={() => {
@@ -81,14 +89,17 @@ export default function TrailStepRow({
               </button>
             )}
           </td>
-            {showActions && (
+          {showActions && (
+            <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>{step.sortIndex}</td>
+          )}
+          {showActions && (
               <>
                 <td style={{ border: '1px solid #ccc', padding: '0.5rem', textAlign: 'center' }}>
                     <>
                       <button
                         onClick={() => {
                           setEditingStepId(step.id);
-                          setEditingValues({ stepName: step.stepName, analyze: step.analyze, result: step.result });
+                          setEditingValues({ stepName: step.stepName, analyze: step.analyze, result: step.result, sortIndex: step.sortIndex || 0 });
                         }}
                         style={{ padding: '0.25rem 0.5rem', marginRight: '0.25rem' }}
                       >
